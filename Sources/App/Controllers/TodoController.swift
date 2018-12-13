@@ -5,7 +5,7 @@ final class TodoController {
     
     func getTickers(_ req: Request) throws -> String {
         
-        var tickers = [String : AnyObject]()
+        var tickers = [String : Any]()
         
         let group = DispatchGroup()
         
@@ -44,7 +44,7 @@ final class TodoController {
                                 let dict = ["price" : tickerPrice,
                                             "change" : tickerChange]
                                 
-                                tickers[symbol] = dict as AnyObject
+                                tickers[symbol] = dict as Any
                             }
                         })
                         group.leave()
