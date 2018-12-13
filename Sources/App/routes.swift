@@ -2,11 +2,18 @@ import Vapor
 
 /// Register your application's routes here.
 public func routes(_ router: Router) throws {
-
-    func index(_ req: Request) throws -> Future<[Todo]> {
-        return Todo.query(on: req).all()
+    // Basic "It works" example
+    router.get { req in
+        return "It works!"
     }
     
-    let todoController = TodoController()   
+    // Basic "Hello, world!" example
+    router.get("hello") { req in
+        return "Hello, world!"
+    }
+
+    // Example of configuring a controller
+    let todoController = TodoController()
     router.get("getTickers", use: todoController.getTickers)
+
 }
