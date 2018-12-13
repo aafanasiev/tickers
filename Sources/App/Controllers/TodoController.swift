@@ -11,10 +11,15 @@ final class TodoController {
         
         let url = URL(string: "https://api.newdex.io/v1/ticker/all")!
         let session = URLSession.shared
-        let request = NSMutableURLRequest(url: url)
+        
+        let request = URLRequest(url: url)
+//        let request = NSMutableURLRequest(url: url)
         
         group.enter()
-        let mData = session.dataTask(with: request as URLRequest) { (data, response, error) -> Void in
+        
+        
+        
+        let mData = session.dataTask(with: request) { (data, response, error) -> Void in
             
             if let dat = data {
                 
