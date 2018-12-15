@@ -21,9 +21,33 @@ struct Datas: Content, Codable {
 struct Ticker: Content, Codable {
     
     let symbol: String
-    let price: Double
-    let change: Double
+    let priceUSD: Double
+    let changeUSD: Double
+    let priceBTC: Double
+    let changeBTC: Double
 }
+
+struct BitcoinResponse: Content, Codable {
+    let data: Bitcoin
+    let timestamp: Int64
+}
+
+struct Bitcoin: Content, Codable {
+    
+    let id: String
+    let rank: String
+    let symbol: String
+    let name: String
+    let supply: String
+    let maxSupply: String
+    let marketCapUsd: String
+    let volumeUsd24Hr: String
+    let priceUsd: String
+    let changePercent24Hr: String
+    let vwap24Hr: String
+    
+}
+
 
 /// Register your application's routes here.
 public func routes(_ router: Router) throws {
@@ -42,78 +66,29 @@ public func routes(_ router: Router) throws {
     router.get("getTickers", use: todoController.getTickers)
 
     
-    router.get("example") { req -> Future<[Ticker]> in
-        
-        
-        let res = try req.client().get("https://api.newdex.io/v1/ticker/all")
-        
-        return res.flatMap({ response -> EventLoopFuture<[Ticker]> in
-            
-            let a = try response.content.decode(ExampleData.self)
-            
-            var eosPrice: Double = 0
-            var eosChange: Double = 0
-            
-            _ = a.map({ datas -> Void in
-                
-                let eos = datas.data.filter{$0.currency == "EOS"}.first!
-                eosPrice = eos.last
-                eosChange = eos.change
-            })
-            
-            
-            let q = a.map({ (ed) -> [Ticker] in
-                
-                let resp = ed.data.filter{$0.symbol.suffix(3) == "eos"}.map({ data -> Ticker in
-                    
-                    let tickerPrice = data.last * eosPrice
-                    
-                    let yesterdayPrice = (eosPrice / (1 + eosChange)) * (data.last / (1 + data.change))
-                    
-                    let tickerChange = (tickerPrice - yesterdayPrice) / yesterdayPrice
-                    
-                    let newData = Ticker(symbol: data.currency, price: tickerPrice, change: tickerChange)
-                    
-                    return newData
-                    
-                })
-                return resp
-                
-            })
-            
-
-            return q
-            
+//    router.get("example") { req -> Future<[Ticker]> in
 //
-//            let resp = tickers.filter{$0.symbol.suffix(3) == "eos"}.map({ data -> Ticker in
 //
-//                let tickerPrice = data.last * eosPrice
+//        let res = try req.client().get("https://api.newdex.io/v1/ticker/all")
 //
-//                let yesterdayPrice = (eosPrice / (1 + eosChange)) * (data.last / (1 + data.change))
+//        return res.flatMap({ response -> EventLoopFuture<[Ticker]> in
 //
-//                let tickerChange = (tickerPrice - yesterdayPrice) / yesterdayPrice
+//            let a = try response.content.decode(ExampleData.self)
 //
-//                let newData = Ticker(symbol: data.currency, price: tickerPrice, change: tickerChange)
+//            var eosPrice: Double = 0
+//            var eosChange: Double = 0
 //
-//                return newData
+//            _ = a.map({ datas -> Void in
 //
+//                let eos = datas.data.filter{$0.currency == "EOS"}.first!
+//                eosPrice = eos.last
+//                eosChange = eos.change
 //            })
 //
 //
+//            let q = a.map({ (ed) -> [Ticker] in
 //
-//
-//
-//
-//
-//            return ccc
-            
-            
-        
-            
-//            let c = a.map({ datas -> Ticker in
-//
-//
-//               let resp = datas.data.filter{$0.symbol.suffix(3) == "eos"}.map({ data -> Ticker in
+//                let resp = ed.data.filter{$0.symbol.suffix(3) == "eos"}.map({ data -> Ticker in
 //
 //                    let tickerPrice = data.last * eosPrice
 //
@@ -126,63 +101,95 @@ public func routes(_ router: Router) throws {
 //                    return newData
 //
 //                })
-//
 //                return resp
 //
-//
 //            })
 //
-//            return c
-            
+//
+//            return q
+//
+//
+//        })
+//    }
+    
+    router.get("tickers") { req -> Future<[Ticker]> in
         
+        var bitcoin: Bitcoin!
+        
+        let bitRes = try req.client().get("https://api.coincap.io/v2/assets/bitcoin")
+        
+        return bitRes.flatMap({ resp -> EventLoopFuture<[Ticker]> in
+            let bitcoinResp = try resp.content.decode(BitcoinResponse.self)
             
-//            _ = a.filter{($0["symbol"] as! String).suffix(3) == "eos"}.map({ val -> Void in
-//
-//                if let price = val["last"] as? Double, let change = val["change"] as? Double, let symbol = val["currency"] as? String {
-//
-//                    let tickerPrice = price * eosPrice
-//
-//                    let yesterdayPrice = (eosPrice / (1 + eosChange)) * (price / (1 + change))
-//
-//                    let tickerChange = (tickerPrice - yesterdayPrice) / yesterdayPrice
-//
-//
-//                    let dict = ["price" : tickerPrice,
-//                                "change" : tickerChange]
-//
-//                    tickers[symbol] = dict as Any
-//                }
-//            })
-            
-            
-            
-            
-            
-//            return b
-            
-//            return try response.content.decode(ExampleData.self)
-            
-            
+            return bitcoinResp.flatMap({ bitok -> EventLoopFuture<[Ticker]> in
+                bitcoin = bitok.data
+                
+                let btcPrice = Double(bitcoin.priceUsd) ?? 0
+                let btcChange = Double(bitcoin.changePercent24Hr) ?? 0
+                
+                let res = try req.client().get("https://api.newdex.io/v1/ticker/all")
+                
+                return res.flatMap({ response -> EventLoopFuture<[Ticker]> in
+                    
+                    let a = try response.content.decode(ExampleData.self)
+                    
+                    var eosPrice: Double = 0
+                    var eosChange: Double = 0
+                    
+                    _ = a.map({ datas -> Void in
+                        
+                        let eos = datas.data.filter{$0.currency == "EOS"}.first!
+                        eosPrice = eos.last
+                        eosChange = eos.change
+                    })
+                    
+                    
+                    let q = a.map({ (ed) -> [Ticker] in
+                        
+                        let resp = ed.data.filter{$0.symbol.suffix(3) == "eos" || $0.contract == "eosio.token"}.map({ data -> Ticker in
+                            
+                            if data.contract == "eosio.token" {
+                                //EOS
+                                let tickerPrice = eosPrice
+                                let tickerPriceBTC = tickerPrice / btcPrice
+                                let tickerChange = eosChange
+                                
+                                
+                                let yesterdayPrice = (eosPrice / (1 + eosChange))
+                                
+                                let yesterdayPriceBTC = btcPrice / (1 + btcChange / 100)
+                                let yesterdayAssetPriceBTC = yesterdayPrice / yesterdayPriceBTC
+                                
+                                let tickerChangeBTC = (tickerPriceBTC - yesterdayAssetPriceBTC) / yesterdayAssetPriceBTC
+                                
+                                let newData = Ticker(symbol: data.currency, priceUSD: tickerPrice, changeUSD: tickerChange, priceBTC: tickerPriceBTC, changeBTC: tickerChangeBTC)
+                                return newData
+                                
+                            } else {
+                                let tickerPrice = data.last * eosPrice
+                                let tickerPriceBTC = tickerPrice / btcPrice
+                                
+                                let yesterdayPrice = (eosPrice / (1 + eosChange)) * (data.last / (1 + data.change))
+                                
+                                let tickerChange = (tickerPrice - yesterdayPrice) / yesterdayPrice
+                                
+                                let yesterdayPriceBTC = btcPrice / (1 + btcChange / 100)
+                                let yesterdayAssetPriceBTC = yesterdayPrice / yesterdayPriceBTC
+                                
+                                let tickerChangeBTC = (tickerPriceBTC - yesterdayAssetPriceBTC) / yesterdayAssetPriceBTC
+                                
+                                let newData = Ticker(symbol: data.currency, priceUSD: tickerPrice, changeUSD: tickerChange, priceBTC: tickerPriceBTC, changeBTC: tickerChangeBTC)
+                                
+                                return newData
+                            }
+                        })
+                        return resp
+                        
+                    })
+                    return q
+                })
+            })
         })
-        
-        
-        
-        
-//        let client = try HTTPClient.connect(hostname: "https://api.newdex.io/v1/ticker/all", on: Application()).wait()
-//        print(client) // HTTPClient
-//        // Create an HTTP request: GET /
-//        let httpReq = HTTPRequest(method: .GET, url: "/")
-//        // Send the HTTP request, fetching a response
-//        let httpRes = try client.send(httpReq).wait()
-//        print(httpRes) // HTTPResponse
-//        
-//        
-//        // Renders the `ExampleData` into a `View`
-//        return ""
-//            //try req.view().render("home", exampleData)
-
-        
-        
     }
     
 }
